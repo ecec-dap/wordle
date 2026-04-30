@@ -223,59 +223,59 @@ function updateBoard(){
 
 // ===== CHECK GUESS =====
 function checkGuess(){
-  const row=board.children[currentRow];
-  const guess=currentGuess;
+  const row = board.children[currentRow];
+  const guess = currentGuess;
 
-  if(guess.length!==cols){ alert("Incomplete word"); return; }
+  if(guess.length !== cols){ alert("Incomplete word"); return; }
   if(!validWords.includes(guess)){ alert("Not a valid word"); return; }
 
-  let tempWord=word.split("");
-  let rowResult=[];
+  let tempWord = word.split("");
+  let rowResult = [];
 
   for(let i=0;i<cols;i++){
     setTimeout(()=>{
-      const tile=row.children[i];
+      const tile = row.children[i];
       tile.classList.add("flip");
 
       setTimeout(()=>{
         let key = document.getElementById("key-" + guess[i]);
 
-    if (guess[i] === word[i]) {
-      tile.classList.add("correct");
-    
-      key.classList.remove("present", "absent");
-      key.classList.add("correct");
-    
-      tempWord[i] = null;
-      rowResult.push("🟩");
-    
-    } else {
-      const idx = tempWord.indexOf(guess[i]);
-    
-      if (idx !== -1) {
-        tile.classList.add("present");
-    
-        if (!key.classList.contains("correct")) {
-          key.classList.remove("absent");
-          key.classList.add("present");
+        if (guess[i] === word[i]) {
+          tile.classList.add("correct");
+        
+          key.classList.remove("present", "absent");
+          key.classList.add("correct");
+        
+          tempWord[i] = null;
+          rowResult.push("🟩");
+        
+        } else {
+          const idx = tempWord.indexOf(guess[i]);
+        
+          if (idx !== -1) {
+            tile.classList.add("present");
+        
+            if (!key.classList.contains("correct")) {
+              key.classList.remove("absent");
+              key.classList.add("present");
+            }
+        
+            tempWord[idx] = null;
+            rowResult.push("🟨");
+        
+          } else {
+            tile.classList.add("absent");
+        
+            if (
+              !key.classList.contains("correct") &&
+              !key.classList.contains("present")
+            ) {
+              key.classList.add("absent");
+            }
+        
+            rowResult.push("⬜");
+          }
         }
-    
-        tempWord[idx] = null;
-        rowResult.push("🟨");
-    
-      } else {
-        tile.classList.add("absent");
-    
-        if (
-          !key.classList.contains("correct") &&
-          !key.classList.contains("present")
-        ) {
-          key.classList.add("absent");
-        }
-    
-        rowResult.push("⬜");
-      }
-    }
 
       },250);
 
@@ -285,23 +285,37 @@ function checkGuess(){
   setTimeout(()=>{
     results.push(rowResult.join(""));
 
-    if(guess===word){
+    // 🎯 Custom messages
+    const messages = [
+      "✨ What wizardry is this? WOOT! 🧙‍♂️🔥",
+      "🧠 This is GENIUS level! Well done! 🎉👏",
+      "😲 Wowser! Incredible effort! 🚀",
+      "👍 Impressive effort! Good job! 💪",
+      "🙌 What an effort! Cheers! 🍻",
+      "😅 Phew! Congratulations! 🎉"
+    ];
+
+    if(guess === word){
       gameWon = true;
-      alert(`🎉 You won in ${results.length}/6!`);
+
+      let tries = results.length;
+      let message = messages[tries - 1] || "🎉 Well done!";
+
+      alert(`${message}\n\n🎯 You won in ${tries}/6!`);
       showShare();
       return;
     }
 
     currentRow++;
-    currentGuess="";
+    currentGuess = "";
 
-    if(currentRow===rows){
+    if(currentRow === rows){
       alert(`😅 You lost! Word was "${word}"`);
       showShare();
     }
-  },cols*300+200);
-}
 
+  }, cols*300 + 200);
+}
 // ===== SHARE BUTTON =====
 function showShare(){
   document.getElementById("shareBtn").style.display="block";
