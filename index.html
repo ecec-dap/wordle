@@ -190,7 +190,7 @@ keys.forEach((r,i)=>{
 
 function createKey(letter,wide=false){
   const btn=document.createElement("button");
-  btn.textContent=letter;
+  btn.textContent = letter.toUpperCase();
   btn.className="key"+(wide?" wide":"");
   btn.id="key-"+letter;
   btn.onclick=()=>handleKey(letter);
@@ -217,7 +217,7 @@ function handleKey(key){
 function updateBoard(){
   const row=board.children[currentRow];
   for(let i=0;i<cols;i++){
-    row.children[i].textContent=currentGuess[i]||"";
+    row.children[i].textContent = (currentGuess[i] || "").toUpperCase();
   }
 }
 
