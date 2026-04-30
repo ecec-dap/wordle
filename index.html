@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wordle Today</title>
+
+<style>
+:root {
+--bg: #f5f7fa;
+--tile-bg: #ffffff;
+--border: #d0d5dd;
+
+--green: #2e7d32;
+--yellow: #edc948;
+--gray: #d3d6da;
+
+--header-blue: #002664; /* NSW Gov blue */
+}
+h1 {
+  background: var(--header-blue);
+  color: white;
+  margin: 0;
+  padding: 20px;
+  font-size: 28px;
+}
+
+h2 {
+  margin-top: 10px;
+  font-weight: normal;
+  color: #475467;
+}
+body {
+margin: 0;
+font-family: "Segoe UI", Arial, sans-serif;
+background: var(--bg);
+color: #1f2937;
+text-align: center;
+}
+
+
+#gameContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#board {
+  margin-top: 20px;
+  display: grid;
+  gap: 5px;
+}
+
+.row { display: grid; gap: 5px; }
+
+.tile {
+width: 50px;
+height: 50px;
+border: 2px solid var(--border);
+background: var(--tile-bg);
+display: flex;
+align-items: center;
+justify-content: center;
+font-size: 22px;
+font-weight: bold;
+}
+
+
+.correct { background: var(--green); }
+.present { background: var(--yellow); }
+.absent { background: var(--gray); }
+
+/* Animations */
+@keyframes flip {
+  0% { transform: rotateX(0); }
+  50% { transform: rotateX(90deg); }
+  100% { transform: rotateX(0); }
+}
+.tile.flip { animation: flip 0.5s ease; }
+
+#keyboard { margin-top: 20px; }
+.key-row { display: flex; justify-content: center; gap: 5px; }
+
+.key {
+padding: 10px;
+border: 1px solid var(--border);
+background: #ffffff;
+color: #1f2937;
+cursor: pointer;
+}
+.key.correct {
+background: var(--green) !important;
+color: white;
+}
+
+.key.present {
+background: var(--yellow) !important;
+color: #1f2937;
+}
+
+.key.absent {
+background: var(--gray) !important;
+color: #1f2937;
+}
+.wide { width: 60px; }
+
+/* Share button */
+#shareBtn {
+margin-top: 15px;
+padding: 10px 20px;
+background: var(--header-blue);
+color: white;
+border: none;
+border-radius: 4px;
+display: none;
+cursor: pointer;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>WORDLE OF THE DAY</h1>
+<h2>Brought to you by DAP Health & Wellbeing</h2>
+<div id="gameContainer">
+  <div id="board"></div>
+  <button id="shareBtn" onclick="shareResult()">📤 Share Result</button>
+</div>
+
+<div id="keyboard"></div>
+
+<script>
+// ===== LOAD WORD LIST =====
+let validWords = [];
+fetch("words.txt")
+  .then(res => res.text())
+  .then(text => {
+    validWords = text.split("\n").map(w => w.trim().toLowerCase());
+  });
+
+// ===== GET WORD =====
+const params = new URLSearchParams(window.location.search);
+let word = atob(params.get("w") || "YXBwbGU=").toLowerCase();
+
+// ===== GAME STATE =====
+const rows = 6;
+const cols = word.length;
+
+let currentRow = 0;
+let currentGuess = "";
+let results = [];
+let gameWon = false;
+
+// ===== BUILD BOARD =====
+const board = document.getElementById("board");
+
+for (let r = 0; r < rows; r++) {
+  const row = document.createElement("div");
+  row.className = "row";
+  row.style.gridTemplateColumns = `repeat(${cols}, 50px)`;
+
+  for (let c = 0; c < cols; c++) {
+    const tile = document.createElement("div");
+    tile.className = "tile";
+    row.appendChild(tile);
+  }
+
+  board.appendChild(row);
+}
+
+// ===== KEYBOARD =====
+const keys = ["qwertyuiop","asdfghjkl","zxcvbnm"];
+const keyboard = document.getElementById("keyboard");
+
+keys.forEach((r,i)=>{
+  const row = document.createElement("div");
+  row.className="key-row";
+
+  if(i===2) row.appendChild(createKey("Enter",true));
+
+  r.split("").forEach(k=>row.appendChild(createKey(k)));
+
+  if(i===2) row.appendChild(createKey("⌫",true));
+
+  keyboard.appendChild(row);
+});
+
+function createKey(letter,wide=false){
+  const btn=document.createElement("button");
+  btn.textContent=letter;
+  btn.className="key"+(wide?" wide":"");
+  btn.id="key-"+letter;
+  btn.onclick=()=>handleKey(letter);
+  return btn;
+}
+
+// ===== INPUT =====
+document.addEventListener("keydown",e=>{
+  if(e.key==="Enter") handleKey("Enter");
+  else if(e.key==="Backspace") handleKey("⌫");
+  else if(/^[a-zA-Z]$/.test(e.key)) handleKey(e.key);
+});
+
+function handleKey(key){
+  if(currentRow>=rows) return;
+
+  if(key==="Enter"){ checkGuess(); return; }
+  if(key==="⌫"){ currentGuess=currentGuess.slice(0,-1); }
+  else if(currentGuess.length<cols){ currentGuess+=key; }
+
+  updateBoard();
+}
+
+function updateBoard(){
+  const row=board.children[currentRow];
+  for(let i=0;i<cols;i++){
+    row.children[i].textContent=currentGuess[i]||"";
+  }
+}
+
+// ===== CHECK GUESS =====
+function checkGuess(){
+  const row=board.children[currentRow];
+  const guess=currentGuess;
+
+  if(guess.length!==cols){ alert("Incomplete word"); return; }
+  if(!validWords.includes(guess)){ alert("Not a valid word"); return; }
+
+  let tempWord=word.split("");
+  let rowResult=[];
+
+  for(let i=0;i<cols;i++){
+    setTimeout(()=>{
+      const tile=row.children[i];
+      tile.classList.add("flip");
+
+      setTimeout(()=>{
+        let key = document.getElementById("key-" + guess[i]);
+
+    if (guess[i] === word[i]) {
+      tile.classList.add("correct");
+    
+      key.classList.remove("present", "absent");
+      key.classList.add("correct");
+    
+      tempWord[i] = null;
+      rowResult.push("🟩");
+    
+    } else {
+      const idx = tempWord.indexOf(guess[i]);
+    
+      if (idx !== -1) {
+        tile.classList.add("present");
+    
+        if (!key.classList.contains("correct")) {
+          key.classList.remove("absent");
+          key.classList.add("present");
+        }
+    
+        tempWord[idx] = null;
+        rowResult.push("🟨");
+    
+      } else {
+        tile.classList.add("absent");
+    
+        if (
+          !key.classList.contains("correct") &&
+          !key.classList.contains("present")
+        ) {
+          key.classList.add("absent");
+        }
+    
+        rowResult.push("⬜");
+      }
+    }
+
+      },250);
+
+    },i*300);
+  }
+
+  setTimeout(()=>{
+    results.push(rowResult.join(""));
+
+    if(guess===word){
+      gameWon = true;
+      alert(`🎉 You won in ${results.length}/6!`);
+      showShare();
+      return;
+    }
+
+    currentRow++;
+    currentGuess="";
+
+    if(currentRow===rows){
+      alert(`😅 You lost! Word was "${word}"`);
+      showShare();
+    }
+  },cols*300+200);
+}
+
+// ===== SHARE BUTTON =====
+function showShare(){
+  document.getElementById("shareBtn").style.display="block";
+}
+
+// ===== SHARE RESULT =====
+function shareResult(){
+  let text = "";
+
+  if(gameWon){
+    let tries = results.findIndex(r => r === "🟩".repeat(word.length)) + 1;
+    text += `Wordle guessed in ${tries}/6 🎯. Can you do better?\n\n`;
+  } else {
+    text += `Wordle attempted!\n\n`;
+  }
+
+  results.forEach(r => text += r + "\n");
+
+  if(!gameWon){
+    text += "\n😅 Tough one today! Can you do better?\n";
+  }
+
+  text += `\nPlay here:\n${window.location.href}`;
+
+  copy(text);
+}
+
+// ===== COPY =====
+function copy(text){
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  document.body.appendChild(textarea);
+  textarea.select();
+
+  try {
+    document.execCommand("copy");
+    alert("Copied! Paste in Teams 🚀");
+  } catch {
+    prompt("Copy manually:", text);
+  }
+
+  document.body.removeChild(textarea);
+}
+</script>
+
+</body>
+</html>
