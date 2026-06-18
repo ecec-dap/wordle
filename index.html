@@ -231,56 +231,82 @@ function checkGuess(){
 
   let tempWord = word.split("");
   let rowResult = [];
+  let result = Array(cols).fill("absent");
 
-  for(let i=0;i<cols;i++){
-    setTimeout(()=>{
-      const tile = row.children[i];
-      tile.classList.add("flip");
+  // Pass 1 - Greens
+for (let i = 0; i < cols; i++) {
+    if (guess[i] === word[i]) {
+        result[i] = "correct";
+        tempWord[i] = null;
+    }
+}
 
-      setTimeout(()=>{
-        let key = document.getElementById("key-" + guess[i]);
+// Pass 2 - Yellows
+for (let i = 0; i < cols; i++) {
 
-        if (guess[i] === word[i]) {
-          tile.classList.add("correct");
-        
-          key.classList.remove("present", "absent");
-          key.classList.add("correct");
-        
-          tempWord[i] = null;
-          rowResult.push("🟩");
-        
-        } else {
-          const idx = tempWord.indexOf(guess[i]);
-        
-          if (idx !== -1) {
-            tile.classList.add("present");
-        
-            if (!key.classList.contains("correct")) {
-              key.classList.remove("absent");
-              key.classList.add("present");
+    if (result[i] === "correct") continue;
+
+    const idx = tempWord.indexOf(guess[i]);
+
+    if (idx !== -1) {
+        result[i] = "present";
+        tempWord[idx] = null;
+    }
+}
+
+  
+  for(let i = 0; i < cols; i++) {
+
+    setTimeout(() => {
+
+        const tile = row.children[i];
+        tile.classList.add("flip");
+
+        setTimeout(() => {
+
+            let key = document.getElementById("key-" + guess[i]);
+
+            if (result[i] === "correct") {
+
+                tile.classList.add("correct");
+
+                key.classList.remove("present", "absent");
+                key.classList.add("correct");
+
+                rowResult.push("🟩");
+
             }
-        
-            tempWord[idx] = null;
-            rowResult.push("🟨");
-        
-          } else {
-            tile.classList.add("absent");
-        
-            if (
-              !key.classList.contains("correct") &&
-              !key.classList.contains("present")
-            ) {
-              key.classList.add("absent");
+            else if (result[i] === "present") {
+
+                tile.classList.add("present");
+
+                if (!key.classList.contains("correct")) {
+                    key.classList.remove("absent");
+                    key.classList.add("present");
+                }
+
+                rowResult.push("🟨");
+
             }
-        
-            rowResult.push("⬜");
-          }
-        }
+            else {
 
-      },250);
+                tile.classList.add("absent");
 
-    },i*300);
-  }
+                if (
+                    !key.classList.contains("correct") &&
+                    !key.classList.contains("present")
+                ) {
+                    key.classList.add("absent");
+                }
+
+                rowResult.push("⬜");
+            }
+
+        }, 250);
+
+    }, i * 300);
+}
+  
 
   setTimeout(()=>{
     results.push(rowResult.join(""));
